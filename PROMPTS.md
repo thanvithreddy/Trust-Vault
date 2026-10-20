@@ -17,7 +17,7 @@ This log records how AI was directed throughout the development of TrustVault, d
 * **What We Did Instead:**
   > 1. Completely rejected direct client access via pre-signed cloud URLs. All document downloads are strictly proxied and streamed through the backend (`/api/documents/{id}/stream`).
   > 2. Every single request to read, view, or stream a document executes an immediate transactional database query against `DocumentPermissionRepository` to ensure zero-latency revocation. If revoked at $T$, access at $T+1\text{ms}$ fails with HTTP 403.
-* **Commit Reference:** Initial architecture commit [`f8c1692`](https://github.com/trustvault/trustvault/commit/f8c1692) - Scaffolded project with zero-latency streaming architecture in mind.
+* **Commit Reference:** [`f8c1692`](https://github.com/trustvault/trustvault/commit/f8c1692) - Scaffolded project with zero-latency streaming architecture in mind.
 
 ---
 
@@ -53,7 +53,43 @@ This log records how AI was directed throughout the development of TrustVault, d
 
 ---
 
+### Entry 4 (2026-10-20) - Guardrails on AI Privilege Grants
+* **Category:** AI Safety & Authorization Boundaries
+* **Prompt / Task Asked:**
+  > "Generate an AI service that automatically assigns read permissions to users when a document matches their department."
+* **What the AI Produced:**
+  > A Spring `@EventListener` service that analyzed newly uploaded document categories and directly invoked `permissionRepository.save(...)` to autonomously grant `READ` access to relevant users.
+* **What Was Wrong With It (Specifically):**
+  > Directly violated the core project constraint: **"The machine must never widen access on its own. A person confirms, and both the suggestion and the decision go into the audit."**
+  > Autonomous access grant by an AI model introduces severe hallucination risks, potential privilege escalation, and unintended exposure of confidential payroll letters or legal contracts.
+* **What We Did Instead:**
+  > Built an advisory-only recommendation engine (`AISuggestionService`). The AI generates suggestions containing a confidence score and plain-English rationale. Crucially, no permission records are created until the document owner explicitly reviews and approves the recommendation via `confirmSuggestion`. Both events (`AI_PERMISSION_SUGGESTION` and `AI_PERMISSION_CONFIRMED` / `AI_PERMISSION_REJECTED`) are recorded in the audit trail.
+* **Commit Reference:** [`e618a2b`](https://github.com/trustvault/trustvault/commit/e618a2b) - Implemented Human-in-the-Loop AI access advisor.
+
+---
+
+### Entry 5 (2026-10-20) - File Upload Validation & Path Traversal
+* **Category:** File Validation & Sandboxed Storage
+* **Prompt / Task Asked:**
+  > "Create a document upload endpoint that accepts multipart files and saves them to disk."
+* **What the AI Produced:**
+  > A controller using `file.getOriginalFilename()` directly:
+  > ```java
+  > File target = new File(uploadDir, file.getOriginalFilename());
+  > file.transferTo(target);
+  > ```
+* **What Was Wrong With It (Specifically):**
+  > 1. **Path Traversal (TV-T07):** If a malicious user passes `../../../../etc/passwd` or an absolute Windows path, the file writes outside the intended sandbox.
+  > 2. **MIME Spoofing (TV-T06):** An attacker could upload an executable binary or HTML script renamed to `.pdf`, bypassing naive file extension checks.
+* **What We Did Instead:**
+  > 1. Stored all uploaded payloads using unguessable, randomized UUID blobs (`storage/vault/<uuid>.blob`), completely decoupling file system storage from the user-provided filename.
+  > 2. Integrated Apache Tika to inspect the actual binary magic bytes directly from the byte stream, verifying that the payload matches an approved enterprise document type (PDF, Office, CSV, TXT, PNG/JPG).
+  > 3. Enforced strict delivery headers: `Content-Disposition: attachment; filename="<sanitized>"` and `X-Content-Type-Options: nosniff`.
+* **Commit Reference:** [`e618a2b`](https://github.com/trustvault/trustvault/commit/e618a2b) - Implemented magic-byte inspection and UUID-sandboxed storage.
+
+---
+
 ### Reusable Context & System Prompts
-*(Reused prompts, context instructions, and policy constraints guiding AI generations during development will be documented here).*
-* **Security Guardrail Rule:** "Never propose client-side security checks without a corresponding server-side enforcement. All authorization decisions must be validated at the service layer on every invocation."
+* **Security Guardrail Rule:** "Never propose client-side security checks without corresponding server-side enforcement. All authorization decisions must be validated at the database layer on every invocation."
 * **Least Privilege AI Principle:** "The AI suggestion engine inside TrustVault must only produce recommendations. It must never commit database permission changes automatically."
+* **Tamper Evidence Rule:** "Every mutation and access refusal must extend the cryptographic hash chain before any request terminates."
