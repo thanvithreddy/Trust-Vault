@@ -1,0 +1,36 @@
+# Root Gitignore for TrustVault
+
+# Java / Maven
+backend/target/
+backend/.mvn/wrapper/maven-wrapper.jar
+*.class
+.project
+.classpath
+.settings/
+.idea/
+*.iml
+
+# Node / React
+frontend/node_modules/
+frontend/dist/
+frontend/.env.local
+frontend/.env.*.local
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+
+# Environment & Sensitive Config
+.env
+*.env
+application-local.properties
+application-local.yml
+
+# Uploaded secure storage (MUST NEVER BE COMMITTED)
+backend/storage/
+storage/
+uploads/
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+*.log
