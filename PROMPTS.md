@@ -17,7 +17,7 @@ This log records how AI was directed throughout the development of TrustVault, d
 * **What We Did Instead:**
   > 1. Completely rejected direct client access via pre-signed cloud URLs. All document downloads are strictly proxied and streamed through the backend (`/api/documents/{id}/stream`).
   > 2. Every single request to read, view, or stream a document executes an immediate transactional database query against `DocumentPermissionRepository` to ensure zero-latency revocation. If revoked at $T$, access at $T+1\text{ms}$ fails with HTTP 403.
-* **Commit Reference:** Initial architecture commit `[ref: architecture-revocation-design]`.
+* **Commit Reference:** Initial architecture commit [`f8c1692`](https://github.com/trustvault/trustvault/commit/f8c1692) - Scaffolded project with zero-latency streaming architecture in mind.
 
 ---
 
