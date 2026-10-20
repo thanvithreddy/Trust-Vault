@@ -24,17 +24,32 @@ This log records how AI was directed throughout the development of TrustVault, d
 ### Entry 2 (2026-10-20) - Audit Log Tamper Resistance & Failure Tracking
 * **Category:** Audit Trail & Non-Repudiation
 * **Prompt / Task Asked:**
-  > "Create an audit logging entity and service that records successful document CRUD and sharing events into a PostgreSQL table."
+  > "Create an audit logging entity and service that records document CRUD and sharing events into a PostgreSQL table."
 * **What the AI Produced:**
-  > A standard Spring Data JPA entity `AuditLog` with fields `(id, userId, action, timestamp, details)` and a service method `logEvent(...)` called from `@PostMapping` or `@PutMapping` controller methods after a successful action.
+  > A standard Spring Data JPA entity `AuditLog` with a service method `logEvent(...)` called from `@Transactional` controller methods after a successful action.
 * **What Was Wrong With It (Specifically):**
   > 1. **Ignored Refused Access:** The AI only triggered logging *after* successful operations. The TrustVault specification requires: *"You can prove who reached it... including the attempts that were refused."* An attacker probing for unauthorized documents would leave zero trace.
-  > 2. **Mutable / Fragile Audit Trail:** Standard JPA tables can be altered or pruned with standard SQL queries (`UPDATE audit_logs` or `DELETE FROM audit_logs`). An insider or attacker could quietly wipe their footprints.
+  > 2. **Transaction Rollback on Refusal Bug:** When an unauthorized access was refused and the code threw `AccessDeniedException`, Spring's outer `@Transactional` rolled back the entire transaction, erasing the audit log of the refused attempt!
+  > 3. **Mutable / Fragile Audit Trail:** Standard JPA tables can be altered with `UPDATE` or `DELETE`, allowing rogue insiders to hide actions.
 * **What We Did Instead:**
-  > 1. Shifted audit logging into a centralized Security AOP interceptor / Security Filter and Permission Engine that records both `GRANTED` and `DENIED` events with HTTP status codes and caller identities.
-  > 2. Designed the audit log database table with PostgreSQL append-only rules/triggers prohibiting `UPDATE` and `DELETE`.
-  > 3. Implemented cryptographic hash chaining (`prev_hash` + `SHA-256(current_entry)`) so any manual tampering corrupts the chain and is detected immediately by verification routines.
-* **Commit Reference:** `[ref: audit-trail-tamper-resistance]`.
+  > 1. Isolated `AuditService.logEvent` with `@Transactional(propagation = Propagation.REQUIRES_NEW)`. This commits refused access attempts into the database immediately inside an isolated physical transaction before throwing `AccessDeniedException`.
+  > 2. Designed cryptographic hash chaining (`prev_hash` + `SHA-256(current_entry)`) so any manual tampering corrupts the chain and is detected by `verifyIntegrity()`.
+* **Commit Reference:** [`e618a2b`](https://github.com/trustvault/trustvault/commit/e618a2b) - Implemented `REQUIRES_NEW` isolation and hash-chaining verification.
+
+---
+
+### Entry 3 (2026-10-20) - Cryptographic Chain Corruption via Instant Precision Truncation
+* **Category:** Cryptographic Audit Trail
+* **Prompt / Task Asked:**
+  > "Implement the SHA-256 hash chaining verification logic in AuditService to verify the integrity of the audit logs from beginning to end."
+* **What the AI Produced:**
+  > An integrity checker that serialized `AuditLog.timestamp` directly using `Instant.now().toString()`.
+* **What Was Wrong With It (Specifically):**
+  > In Java, `Instant.now()` has nanosecond precision (up to 9 decimal places, e.g. `.123456789Z`). However, when saved into PostgreSQL or H2 `TIMESTAMP` columns, the database rounds or truncates the timestamp to microseconds (6 decimal places) or milliseconds (3 decimal places).
+  > As a result, when reading back the log for verification, `current.getTimestamp().toString()` had a different string representation than the original in-memory timestamp, causing `verifyIntegrity()` to report false-positive tampering on untouched records!
+* **What We Did Instead:**
+  > Enforced strict timestamp truncation at generation time using `Instant.now().truncatedTo(ChronoUnit.MILLIS)`. This guarantees 100% deterministic string serialization across Java memory, database persistence, and hash recalculation routines.
+* **Commit Reference:** [`e618a2b`](https://github.com/trustvault/trustvault/commit/e618a2b) - Truncated timestamp to milliseconds to ensure deterministic SHA-256 chain verification.
 
 ---
 
