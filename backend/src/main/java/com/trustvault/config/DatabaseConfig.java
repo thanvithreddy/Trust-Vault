@@ -32,25 +32,47 @@ public class DatabaseConfig {
     public DataSource dataSource() {
         HikariConfig config = new HikariConfig();
 
-        // 1. Neon Database URL format (postgres://user:password@host/database?sslmode=require)
-        if (databaseUrl != null && !databaseUrl.isBlank() && databaseUrl.startsWith("postgres://")) {
-            log.info("Configuring DataSource from Neon DATABASE_URL environment variable");
-            try {
-                URI uri = new URI(databaseUrl);
-                String userInfo = uri.getUserInfo();
-                String username = userInfo.split(":")[0];
-                String password = userInfo.split(":")[1];
-                String host = uri.getHost();
-                int port = uri.getPort() == -1 ? 5432 : uri.getPort();
-                String path = uri.getPath();
+        // 1. Neon Database URL format (postgres:// or postgresql:// or jdbc:postgresql://)
+        if (databaseUrl != null && !databaseUrl.isBlank()) {
+            String trimmedUrl = databaseUrl.trim();
+            if (trimmedUrl.startsWith("postgres://") || trimmedUrl.startsWith("postgresql://")) {
+                log.info("Configuring DataSource from Neon DATABASE_URL environment variable");
+                try {
+                    String cleanUrl = trimmedUrl;
+                    if (cleanUrl.startsWith("postgresql://")) {
+                        cleanUrl = "postgres://" + cleanUrl.substring("postgresql://".length());
+                    }
 
-                String jdbcUrl = String.format("jdbc:postgresql://%s:%d%s?sslmode=require", host, port, path);
-                config.setJdbcUrl(jdbcUrl);
-                config.setUsername(username);
-                config.setPassword(password);
-                config.setDriverClassName("org.postgresql.Driver");
-            } catch (Exception e) {
-                log.error("Failed to parse Neon DATABASE_URL, falling back to standard config", e);
+                    URI uri = new URI(cleanUrl);
+                    String userInfo = uri.getUserInfo();
+                    String username = userInfo != null && userInfo.contains(":") ? userInfo.split(":")[0] : (userInfo != null ? userInfo : "");
+                    String password = userInfo != null && userInfo.contains(":") ? userInfo.substring(username.length() + 1) : "";
+                    String host = uri.getHost();
+                    int port = uri.getPort() == -1 ? 5432 : uri.getPort();
+                    String path = uri.getPath();
+                    String query = uri.getQuery();
+
+                    StringBuilder jdbcUrl = new StringBuilder();
+                    jdbcUrl.append("jdbc:postgresql://").append(host).append(":").append(port).append(path);
+                    if (query != null && !query.isBlank()) {
+                        jdbcUrl.append("?").append(query);
+                    } else {
+                        jdbcUrl.append("?sslmode=require");
+                    }
+
+                    config.setJdbcUrl(jdbcUrl.toString());
+                    config.setUsername(username);
+                    config.setPassword(password);
+                    config.setDriverClassName("org.postgresql.Driver");
+                    log.info("Successfully configured Neon PostgreSQL DataSource: jdbc:postgresql://{}:{}{}", host, port, path);
+                } catch (Exception e) {
+                    log.error("Failed to parse Neon DATABASE_URL, falling back to standard config", e);
+                }
+            } else if (trimmedUrl.startsWith("jdbc:")) {
+                config.setJdbcUrl(trimmedUrl);
+                if (trimmedUrl.contains("postgresql")) {
+                    config.setDriverClassName("org.postgresql.Driver");
+                }
             }
         } else if (springDatasourceUrl != null && !springDatasourceUrl.isBlank()) {
             config.setJdbcUrl(springDatasourceUrl);
