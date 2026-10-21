@@ -17,7 +17,7 @@ This log records how AI was directed throughout the development of TrustVault, d
 * **What We Did Instead:**
   > 1. Completely rejected direct client access via pre-signed cloud URLs. All document downloads are strictly proxied and streamed through the backend (`/api/documents/{id}/stream`).
   > 2. Every single request to read, view, or stream a document executes an immediate transactional database query against `DocumentPermissionRepository` to ensure zero-latency revocation. If revoked at $T$, access at $T+1\text{ms}$ fails with HTTP 403.
-* **Commit Reference:** [`f8c1692`](https://github.com/trustvault/trustvault/commit/f8c1692) - Scaffolded project with zero-latency streaming architecture in mind.
+* **Commit Reference:** [`f8c1692`](https://github.com/thanvithreddy/Trust-Vault/commit/f8c1692) - Scaffolded project with zero-latency streaming architecture in mind.
 
 ---
 
@@ -34,7 +34,7 @@ This log records how AI was directed throughout the development of TrustVault, d
 * **What We Did Instead:**
   > 1. Isolated `AuditService.logEvent` with `@Transactional(propagation = Propagation.REQUIRES_NEW)`. This commits refused access attempts into the database immediately inside an isolated physical transaction before throwing `AccessDeniedException`.
   > 2. Designed cryptographic hash chaining (`prev_hash` + `SHA-256(current_entry)`) so any manual tampering corrupts the chain and is detected by `verifyIntegrity()`.
-* **Commit Reference:** [`e618a2b`](https://github.com/trustvault/trustvault/commit/e618a2b) - Implemented `REQUIRES_NEW` isolation and hash-chaining verification.
+* **Commit Reference:** [`e618a2b`](https://github.com/thanvithreddy/Trust-Vault/commit/e618a2b) - Implemented `REQUIRES_NEW` isolation and hash-chaining verification.
 
 ---
 
@@ -49,7 +49,7 @@ This log records how AI was directed throughout the development of TrustVault, d
   > As a result, when reading back the log for verification, `current.getTimestamp().toString()` had a different string representation than the original in-memory timestamp, causing `verifyIntegrity()` to report false-positive tampering on untouched records!
 * **What We Did Instead:**
   > Enforced strict timestamp truncation at generation time using `Instant.now().truncatedTo(ChronoUnit.MILLIS)`. This guarantees 100% deterministic string serialization across Java memory, database persistence, and hash recalculation routines.
-* **Commit Reference:** [`e618a2b`](https://github.com/trustvault/trustvault/commit/e618a2b) - Truncated timestamp to milliseconds to ensure deterministic SHA-256 chain verification.
+* **Commit Reference:** [`e618a2b`](https://github.com/thanvithreddy/Trust-Vault/commit/e618a2b) - Truncated timestamp to milliseconds to ensure deterministic SHA-256 chain verification.
 
 ---
 
@@ -64,7 +64,7 @@ This log records how AI was directed throughout the development of TrustVault, d
   > Autonomous access grant by an AI model introduces severe hallucination risks, potential privilege escalation, and unintended exposure of confidential payroll letters or legal contracts.
 * **What We Did Instead:**
   > Built an advisory-only recommendation engine (`AISuggestionService`). The AI generates suggestions containing a confidence score and plain-English rationale. Crucially, no permission records are created until the document owner explicitly reviews and approves the recommendation via `confirmSuggestion`. Both events (`AI_PERMISSION_SUGGESTION` and `AI_PERMISSION_CONFIRMED` / `AI_PERMISSION_REJECTED`) are recorded in the audit trail.
-* **Commit Reference:** [`e618a2b`](https://github.com/trustvault/trustvault/commit/e618a2b) - Implemented Human-in-the-Loop AI access advisor.
+* **Commit Reference:** [`e618a2b`](https://github.com/thanvithreddy/Trust-Vault/commit/e618a2b) - Implemented Human-in-the-Loop AI access advisor.
 
 ---
 
@@ -85,7 +85,7 @@ This log records how AI was directed throughout the development of TrustVault, d
   > 1. Stored all uploaded payloads using unguessable, randomized UUID blobs (`storage/vault/<uuid>.blob`), completely decoupling file system storage from the user-provided filename.
   > 2. Integrated Apache Tika to inspect the actual binary magic bytes directly from the byte stream, verifying that the payload matches an approved enterprise document type (PDF, Office, CSV, TXT, PNG/JPG).
   > 3. Enforced strict delivery headers: `Content-Disposition: attachment; filename="<sanitized>"` and `X-Content-Type-Options: nosniff`.
-* **Commit Reference:** [`e618a2b`](https://github.com/trustvault/trustvault/commit/e618a2b) - Implemented magic-byte inspection and UUID-sandboxed storage.
+* **Commit Reference:** [`e618a2b`](https://github.com/thanvithreddy/Trust-Vault/commit/e618a2b) - Implemented magic-byte inspection and UUID-sandboxed storage.
 
 ---
 
