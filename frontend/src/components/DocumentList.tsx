@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Plus, Download, Share2, Trash2, Lock, FileText, AlertOctagon, RefreshCw } from 'lucide-react';
+import { Search, Plus, Download, Share2, Trash2, Lock, FileText, AlertOctagon, RefreshCw, Copy, Check, ShieldCheck } from 'lucide-react';
 import { api } from '../api';
 import type { DocumentItem, User } from '../types';
 
@@ -10,6 +10,7 @@ interface DocumentListProps {
   onOpenShare: (doc: DocumentItem) => void;
   onDocumentDeleted: (id: string) => void;
   onRefresh: () => void;
+  onNotify?: (message: string, type?: 'success' | 'error' | 'info') => void;
 }
 
 export const DocumentList: React.FC<DocumentListProps> = ({
@@ -19,11 +20,13 @@ export const DocumentList: React.FC<DocumentListProps> = ({
   onOpenShare,
   onDocumentDeleted,
   onRefresh,
+  onNotify,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [copiedHashId, setCopiedHashId] = useState<string | null>(null);
 
   const categories = ['ALL', ...Array.from(new Set(documents.map((d) => d.category)))];
 
@@ -31,7 +34,8 @@ export const DocumentList: React.FC<DocumentListProps> = ({
     const matchesSearch =
       doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       doc.originalFilename.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      doc.ownerEmail.toLowerCase().includes(searchTerm.toLowerCase());
+      doc.ownerEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      doc.ownerFullName.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === 'ALL' || doc.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
@@ -41,23 +45,39 @@ export const DocumentList: React.FC<DocumentListProps> = ({
       setDownloadingId(doc.id);
       setErrorMessage(null);
       await api.streamDocument(doc.id, doc.originalFilename);
+      if (onNotify) {
+        onNotify(`Successfully streamed "${doc.originalFilename}" (Verified SHA-256)`, 'success');
+      }
     } catch (err: any) {
-      const msg = err.response?.data?.message || err.response?.data || err.message || 'Access Denied: Stream rejected';
-      setErrorMessage(typeof msg === 'string' ? msg : JSON.stringify(msg));
+      const msg = err.response?.data?.message || err.response?.data || err.message || 'Access Denied: Stream rejected by security policy';
+      const cleanMsg = typeof msg === 'string' ? msg : JSON.stringify(msg);
+      setErrorMessage(cleanMsg);
+      if (onNotify) {
+        onNotify(`Access Refused: ${cleanMsg}`, 'error');
+      }
     } finally {
       setDownloadingId(null);
     }
   };
 
   const handleDelete = async (doc: DocumentItem) => {
-    if (!window.confirm(`Are you sure you want to delete "${doc.title}"?`)) return;
+    if (!window.confirm(`Permanently remove "${doc.title}" from active vault?`)) return;
     try {
       setErrorMessage(null);
       await api.deleteDocument(doc.id);
       onDocumentDeleted(doc.id);
+      if (onNotify) {
+        onNotify(`Document "${doc.title}" deleted from vault`, 'info');
+      }
     } catch (err: any) {
-      setErrorMessage('Failed to delete document');
+      setErrorMessage('Failed to delete document: Only the document owner can delete.');
     }
+  };
+
+  const handleCopyHash = (docId: string, hash: string) => {
+    navigator.clipboard.writeText(hash);
+    setCopiedHashId(docId);
+    setTimeout(() => setCopiedHashId(null), 2000);
   };
 
   return (
@@ -71,28 +91,35 @@ export const DocumentList: React.FC<DocumentListProps> = ({
           <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
           <input
             type="text"
-            placeholder="Search documents by name, category, or owner..."
+            placeholder="Search documents by title, classification, or owner..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2 text-sm text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:border-blue-500 transition"
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2 text-sm text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:border-blue-500 transition"
           />
         </div>
 
         {/* Category Filters */}
-        <div className="flex items-center space-x-2 overflow-x-auto pb-1 sm:pb-0">
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`text-xs px-3 py-2 rounded-xl font-medium transition whitespace-nowrap ${
-                selectedCategory === cat
-                  ? 'bg-blue-50 text-blue-700 border border-blue-200 font-semibold'
-                  : 'bg-slate-50 text-slate-600 hover:text-slate-900 border border-slate-200 hover:bg-slate-100'
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
+        <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 sm:pb-0">
+          {categories.map((cat) => {
+            const count = cat === 'ALL' ? documents.length : documents.filter(d => d.category === cat).length;
+            const isSelected = selectedCategory === cat;
+            return (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={`text-xs px-3 py-1.5 rounded-xl font-semibold transition whitespace-nowrap flex items-center gap-1.5 ${
+                  isSelected
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'bg-slate-50 text-slate-600 hover:text-slate-900 border border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                <span>{cat}</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${isSelected ? 'bg-blue-700 text-blue-100' : 'bg-slate-200 text-slate-600'}`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         {/* Upload & Refresh Buttons */}
@@ -100,7 +127,7 @@ export const DocumentList: React.FC<DocumentListProps> = ({
           <button
             onClick={onRefresh}
             className="p-2 bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200 rounded-xl transition shadow-xs"
-            title="Refresh Vault"
+            title="Refresh Vault Records"
           >
             <RefreshCw className="h-4 w-4" />
           </button>
@@ -108,7 +135,7 @@ export const DocumentList: React.FC<DocumentListProps> = ({
           {currentUser && (currentUser.role === 'ROLE_OWNER' || currentUser.role === 'ROLE_ADMIN') && (
             <button
               onClick={onOpenUpload}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold shadow-xs flex items-center justify-center gap-2 transition"
+              className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold shadow-xs flex items-center justify-center gap-2 transition"
             >
               <Plus className="h-4 w-4" />
               <span>Deposit Document</span>
@@ -120,24 +147,27 @@ export const DocumentList: React.FC<DocumentListProps> = ({
 
       {/* Error alert */}
       {errorMessage && (
-        <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-sm flex items-center justify-between">
-          <div className="flex items-center space-x-2">
+        <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm flex items-center justify-between shadow-xs">
+          <div className="flex items-center space-x-2.5">
             <AlertOctagon className="h-5 w-5 shrink-0 text-rose-600" />
-            <span className="font-medium">{errorMessage}</span>
+            <div>
+              <span className="font-bold">Security Violation: </span>
+              <span className="font-medium">{errorMessage}</span>
+            </div>
           </div>
-          <button onClick={() => setErrorMessage(null)} className="text-xs underline ml-4 hover:text-rose-900">
+          <button onClick={() => setErrorMessage(null)} className="text-xs font-bold underline ml-4 hover:text-rose-950">
             Dismiss
           </button>
         </div>
       )}
 
-      {/* Document Grid / Table */}
+      {/* Document Grid */}
       {filteredDocs.length === 0 ? (
         <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center shadow-xs">
-          <Lock className="h-10 w-10 text-slate-400 mx-auto mb-3" />
-          <h4 className="text-lg font-semibold text-slate-800">No documents found</h4>
+          <Lock className="h-10 w-10 text-slate-300 mx-auto mb-3" />
+          <h4 className="text-base font-bold text-slate-800">No Authorized Documents Found</h4>
           <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1">
-            Either no documents match your filter or no documents have been shared with your account.
+            Either no documents match the active filter, or access has not been explicitly granted to your account.
           </p>
         </div>
       ) : (
@@ -156,53 +186,63 @@ export const DocumentList: React.FC<DocumentListProps> = ({
                   
                   {/* Category & Permission Badge */}
                   <div className="flex items-center justify-between gap-2 mb-3">
-                    <span className="text-[11px] font-semibold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                    <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
                       {doc.category}
                     </span>
 
                     <span
-                      className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold border ${
+                      className={`text-[10px] font-mono px-2.5 py-0.5 rounded-full font-bold border flex items-center gap-1 ${
                         isOwner
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
                           : isEdit
-                          ? 'bg-blue-50 text-blue-700 border-blue-200'
+                          ? 'bg-blue-50 text-blue-800 border-blue-300'
                           : isRead
-                          ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
-                          : 'bg-rose-50 text-rose-700 border-rose-200'
+                          ? 'bg-indigo-50 text-indigo-800 border-indigo-300'
+                          : 'bg-rose-50 text-rose-800 border-rose-300'
                       }`}
                     >
+                      <ShieldCheck className="h-3 w-3" />
                       {doc.userPermissionLevel === 'OWNER' ? 'OWNER (FULL)' : doc.userPermissionLevel}
                     </span>
                   </div>
 
                   {/* Title & Description */}
-                  <h3 className="text-base font-bold text-slate-900 group-hover:text-blue-600 transition line-clamp-1">
+                  <h3 className="text-base font-extrabold text-slate-900 group-hover:text-blue-600 transition line-clamp-1">
                     {doc.title}
                   </h3>
-                  <p className="text-xs text-slate-600 mt-1 line-clamp-2 min-h-[32px]">
-                    {doc.description || 'No description provided.'}
+                  <p className="text-xs text-slate-600 mt-1.5 line-clamp-2 min-h-[34px] leading-relaxed">
+                    {doc.description || 'Secure enterprise document stored with cryptographic hash chaining.'}
                   </p>
 
                   {/* File Metadata */}
-                  <div className="mt-4 pt-3 border-t border-slate-100 space-y-1.5 text-xs text-slate-500">
+                  <div className="mt-4 pt-3 border-t border-slate-100 space-y-2 text-xs text-slate-500">
                     <div className="flex items-center justify-between">
-                      <span className="flex items-center gap-1.5 truncate max-w-[180px] text-slate-700 font-medium">
+                      <span className="flex items-center gap-1.5 truncate max-w-[190px] text-slate-800 font-medium">
                         <FileText className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                         <span className="truncate">{doc.originalFilename}</span>
                       </span>
-                      <span className="font-mono text-slate-400">{(doc.fileSize / 1024).toFixed(1)} KB</span>
+                      <span className="font-mono text-slate-400 font-medium">{(doc.fileSize / 1024).toFixed(1)} KB</span>
                     </div>
 
-                    <div className="flex items-center justify-between text-[11px] text-slate-500 font-mono">
+                    <div className="flex items-center justify-between text-[11px] text-slate-500">
                       <span>Owner:</span>
-                      <span className="truncate max-w-[170px] text-slate-700">{doc.ownerEmail}</span>
+                      <span className="truncate max-w-[170px] text-slate-800 font-semibold">{doc.ownerFullName}</span>
                     </div>
 
                     <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono">
-                      <span>SHA-256:</span>
-                      <span className="truncate max-w-[170px]" title={doc.checksumSha256}>
-                        {doc.checksumSha256.substring(0, 16)}...
-                      </span>
+                      <span>SHA-256 Digest:</span>
+                      <button
+                        onClick={() => handleCopyHash(doc.id, doc.checksumSha256)}
+                        className="truncate max-w-[170px] flex items-center gap-1 hover:text-blue-600 transition"
+                        title="Click to copy full SHA-256 checksum"
+                      >
+                        <span>{doc.checksumSha256.substring(0, 14)}...</span>
+                        {copiedHashId === doc.id ? (
+                          <Check className="h-3 w-3 text-emerald-600 shrink-0" />
+                        ) : (
+                          <Copy className="h-3 w-3 text-slate-400 shrink-0" />
+                        )}
+                      </button>
                     </div>
                   </div>
 
@@ -215,7 +255,7 @@ export const DocumentList: React.FC<DocumentListProps> = ({
                   <button
                     onClick={() => handleDownload(doc)}
                     disabled={downloadingId === doc.id}
-                    className="flex-1 py-2 px-3 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition disabled:opacity-50"
+                    className="flex-1 py-2 px-3 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition disabled:opacity-50"
                   >
                     <Download className={`h-3.5 w-3.5 ${downloadingId === doc.id ? 'animate-bounce' : ''}`} />
                     <span>{downloadingId === doc.id ? 'Streaming...' : 'Download Stream'}</span>

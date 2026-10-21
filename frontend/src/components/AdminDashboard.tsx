@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldAlert, CheckCircle2, AlertTriangle, RefreshCw, Filter, Key, Database, Download, Users } from 'lucide-react';
+import { ShieldAlert, CheckCircle2, AlertTriangle, RefreshCw, Key, Database, Download, Users, Search, FileJson } from 'lucide-react';
 import { api } from '../api';
 import type { AuditLog, ChainVerificationResult } from '../types';
 
@@ -12,6 +12,7 @@ export const AdminDashboard: React.FC = () => {
     permissionChanges: 0,
   });
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
+  const [searchTerm, setSearchTerm] = useState('');
   const [verification, setVerification] = useState<ChainVerificationResult | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -48,6 +49,26 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
+  const handleExportJson = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(logs, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `TrustVault_Audit_Ledger_${new Date().toISOString().slice(0, 10)}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
+  const filteredLogs = logs.filter((log) => {
+    const match =
+      (log.userEmail && log.userEmail.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (log.action && log.action.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (log.documentTitle && log.documentTitle.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (log.ipAddress && log.ipAddress.includes(searchTerm)) ||
+      (log.details && log.details.toLowerCase().includes(searchTerm.toLowerCase()));
+    return match;
+  });
+
   return (
     <div className="space-y-6">
       
@@ -59,14 +80,14 @@ export const AdminDashboard: React.FC = () => {
               <ShieldAlert className="h-6 w-6" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-slate-900 tracking-tight">Security & Audit Control Center</h2>
+              <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">Security & Audit Control Center</h2>
               <p className="text-xs text-slate-500">Cryptographically verifiable immutable ledger of all system interactions</p>
             </div>
           </div>
         </div>
 
-        {/* Verification Action */}
-        <div className="flex items-center space-x-3">
+        {/* Verification & Export Action Buttons */}
+        <div className="flex items-center space-x-2">
           <button
             onClick={loadDashboardData}
             disabled={isLoading}
@@ -78,12 +99,21 @@ export const AdminDashboard: React.FC = () => {
           </button>
 
           <button
+            onClick={handleExportJson}
+            className="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition border border-slate-300 flex items-center gap-1.5 shadow-xs"
+            title="Export full ledger as JSON"
+          >
+            <FileJson className="h-4 w-4 text-slate-600" />
+            <span>Export JSON</span>
+          </button>
+
+          <button
             onClick={handleVerifyChain}
             disabled={isVerifying}
-            className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-xs flex items-center gap-2 transition"
+            className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-2 transition"
           >
             <Key className="h-4 w-4" />
-            <span>{isVerifying ? 'Verifying Hashes...' : 'Verify Cryptographic Integrity'}</span>
+            <span>{isVerifying ? 'Verifying SHA-256 Hashes...' : 'Verify Cryptographic Integrity'}</span>
           </button>
         </div>
       </div>
@@ -93,8 +123,8 @@ export const AdminDashboard: React.FC = () => {
         <div
           className={`p-4 rounded-xl border flex items-start space-x-3 shadow-xs transition ${
             verification.valid
-              ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-              : 'bg-rose-50 border-rose-200 text-rose-800'
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+              : 'bg-rose-50 border-rose-200 text-rose-900'
           }`}
         >
           {verification.valid ? (
@@ -103,12 +133,12 @@ export const AdminDashboard: React.FC = () => {
             <AlertTriangle className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
           )}
           <div className="flex-1 text-sm">
-            <div className="font-bold">
+            <div className="font-extrabold">
               {verification.valid
-                ? `Cryptographic Audit Chain: 100% Intact (${verification.totalRecords} records verified)`
+                ? `Cryptographic Audit Chain: 100% Intact (${verification.totalRecords} records mathematically verified)`
                 : 'Security Alert: Audit Trail Tampering Detected!'}
             </div>
-            <p className="text-xs opacity-90 mt-1">{verification.details}</p>
+            <p className="text-xs opacity-90 mt-1 font-medium">{verification.details}</p>
           </div>
         </div>
       )}
@@ -118,59 +148,69 @@ export const AdminDashboard: React.FC = () => {
         
         <div className="bg-white border border-slate-200 p-5 rounded-xl shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs uppercase tracking-wider text-slate-500 font-semibold">Total Audit Events</span>
+            <span className="text-xs uppercase tracking-wider text-slate-500 font-bold">Total Audit Events</span>
             <Database className="h-4 w-4 text-blue-600" />
           </div>
-          <div className="text-2xl font-bold text-slate-900 mt-2">{stats.totalEvents}</div>
+          <div className="text-2xl font-black text-slate-900 mt-2">{stats.totalEvents}</div>
           <div className="text-xs text-slate-500 mt-1">Append-only ledger entries</div>
         </div>
 
         <div className="bg-white border border-slate-200 p-5 rounded-xl shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs uppercase tracking-wider text-rose-700 font-semibold">Refused Probes (Denied)</span>
+            <span className="text-xs uppercase tracking-wider text-rose-700 font-bold">Refused Probes (Denied)</span>
             <ShieldAlert className="h-4 w-4 text-rose-600" />
           </div>
-          <div className="text-2xl font-bold text-rose-600 mt-2">{stats.deniedAttempts}</div>
-          <div className="text-xs text-rose-600/80 mt-1 font-medium">Blocked security breaches / IDORs</div>
+          <div className="text-2xl font-black text-rose-600 mt-2">{stats.deniedAttempts}</div>
+          <div className="text-xs text-rose-600/90 mt-1 font-semibold">Blocked security breaches / IDORs</div>
         </div>
 
         <div className="bg-white border border-slate-200 p-5 rounded-xl shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs uppercase tracking-wider text-slate-500 font-semibold">Document Downloads</span>
+            <span className="text-xs uppercase tracking-wider text-slate-500 font-bold">Document Downloads</span>
             <Download className="h-4 w-4 text-indigo-600" />
           </div>
-          <div className="text-2xl font-bold text-slate-900 mt-2">{stats.totalDownloads}</div>
+          <div className="text-2xl font-black text-slate-900 mt-2">{stats.totalDownloads}</div>
           <div className="text-xs text-slate-500 mt-1">Verified streamed access</div>
         </div>
 
         <div className="bg-white border border-slate-200 p-5 rounded-xl shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs uppercase tracking-wider text-slate-500 font-semibold">Permission Mutations</span>
+            <span className="text-xs uppercase tracking-wider text-slate-500 font-bold">Permission Mutations</span>
             <Users className="h-4 w-4 text-purple-600" />
           </div>
-          <div className="text-2xl font-bold text-slate-900 mt-2">{stats.permissionChanges}</div>
+          <div className="text-2xl font-black text-slate-900 mt-2">{stats.permissionChanges}</div>
           <div className="text-xs text-slate-500 mt-1">Grants & instant revocations</div>
         </div>
 
       </div>
 
-      {/* Filter Bar */}
-      <div className="flex items-center justify-between bg-white border border-slate-200 px-4 py-3 rounded-xl shadow-xs">
-        <div className="flex items-center space-x-2 text-xs text-slate-500">
-          <Filter className="h-4 w-4 text-slate-400" />
-          <span>Filter Audit Records:</span>
+      {/* Filter and Search Bar */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white border border-slate-200 p-3.5 rounded-xl shadow-xs">
+        
+        {/* Search within logs */}
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search audit trail by actor, document, action, or IP address..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:border-blue-500"
+          />
         </div>
-        <div className="flex space-x-2">
+
+        {/* Filter Pills */}
+        <div className="flex items-center space-x-2">
           {['ALL', 'DENIED', 'SUCCESS'].map((status) => (
             <button
               key={status}
               onClick={() => setFilterStatus(status)}
-              className={`text-xs px-3 py-1.5 rounded-lg font-medium transition ${
+              className={`text-xs px-3 py-1.5 rounded-lg font-bold transition ${
                 filterStatus === status
                   ? status === 'DENIED'
-                    ? 'bg-rose-100 text-rose-800 border border-rose-300 font-semibold'
-                    : 'bg-blue-50 text-blue-700 border border-blue-200 font-semibold'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                    ? 'bg-rose-100 text-rose-800 border border-rose-300'
+                    : 'bg-blue-600 text-white shadow-xs'
+                  : 'bg-slate-50 text-slate-600 hover:text-slate-900 border border-slate-200 hover:bg-slate-100'
               }`}
             >
               {status === 'ALL' ? 'All Activity' : status === 'DENIED' ? 'Refused / Denied Only' : 'Success Only'}
@@ -183,44 +223,44 @@ export const AdminDashboard: React.FC = () => {
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 text-slate-600 uppercase tracking-wider border-b border-slate-200 font-semibold">
+            <thead className="bg-slate-50 text-slate-600 uppercase tracking-wider border-b border-slate-200 font-bold">
               <tr>
                 <th className="py-3 px-4">Timestamp</th>
                 <th className="py-3 px-4">Actor</th>
                 <th className="py-3 px-4">Action</th>
                 <th className="py-3 px-4">Target Document</th>
                 <th className="py-3 px-4">Status</th>
-                <th className="py-3 px-4">Details / IP</th>
-                <th className="py-3 px-4">SHA-256 Chain Hash</th>
+                <th className="py-3 px-4">Details / Client IP</th>
+                <th className="py-3 px-4">SHA-256 Digest</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-700">
-              {logs.length === 0 ? (
+              {filteredLogs.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-slate-400">
-                    No audit records match the selected filter.
+                  <td colSpan={7} className="py-8 text-center text-slate-400 font-medium">
+                    No audit records match the selected search/filter.
                   </td>
                 </tr>
               ) : (
-                logs.map((log) => {
+                filteredLogs.map((log) => {
                   const isDenied = log.status === 'DENIED';
                   return (
                     <tr
                       key={log.id}
-                      className={`hover:bg-slate-50 transition ${isDenied ? 'bg-rose-50/50' : ''}`}
+                      className={`hover:bg-slate-50 transition ${isDenied ? 'bg-rose-50/60 font-medium' : ''}`}
                     >
                       <td className="py-3 px-4 font-mono text-slate-500 whitespace-nowrap">
                         {new Date(log.timestamp).toLocaleString()}
                       </td>
 
                       <td className="py-3 px-4">
-                        <div className="font-semibold text-slate-900">{log.userEmail || 'ANONYMOUS'}</div>
-                        <div className="text-[10px] text-slate-500 font-mono">{log.userRole}</div>
+                        <div className="font-bold text-slate-900">{log.userEmail || 'ANONYMOUS'}</div>
+                        <div className="text-[10px] text-slate-500 font-mono font-medium">{log.userRole}</div>
                       </td>
 
                       <td className="py-3 px-4">
                         <span
-                          className={`px-2 py-0.5 rounded font-mono text-[11px] font-semibold border ${
+                          className={`px-2 py-0.5 rounded font-mono text-[11px] font-bold border ${
                             isDenied
                               ? 'bg-rose-100 text-rose-800 border-rose-300'
                               : log.action.includes('REVOKE')
@@ -236,13 +276,13 @@ export const AdminDashboard: React.FC = () => {
                         </span>
                       </td>
 
-                      <td className="py-3 px-4 max-w-xs truncate text-slate-800 font-medium">
+                      <td className="py-3 px-4 max-w-xs truncate text-slate-900 font-semibold">
                         {log.documentTitle || '-'}
                       </td>
 
                       <td className="py-3 px-4">
                         <span
-                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${
                             isDenied
                               ? 'bg-rose-100 text-rose-800 border-rose-300'
                               : 'bg-emerald-100 text-emerald-800 border-emerald-300'
@@ -253,7 +293,7 @@ export const AdminDashboard: React.FC = () => {
                       </td>
 
                       <td className="py-3 px-4">
-                        <div className="truncate max-w-xs text-slate-700" title={log.details}>
+                        <div className="truncate max-w-xs text-slate-800" title={log.details}>
                           {log.details || '-'}
                         </div>
                         <div className="text-[10px] text-slate-400 font-mono">IP: {log.ipAddress || '127.0.0.1'}</div>
@@ -261,7 +301,7 @@ export const AdminDashboard: React.FC = () => {
 
                       <td className="py-3 px-4 font-mono text-[10px] text-slate-500">
                         <span title={`Previous Hash: ${log.previousHash}\nCurrent Hash: ${log.currentHash}`}>
-                          {log.currentHash.substring(0, 12)}...
+                          {log.currentHash ? log.currentHash.substring(0, 14) + '...' : '-'}
                         </span>
                       </td>
                     </tr>

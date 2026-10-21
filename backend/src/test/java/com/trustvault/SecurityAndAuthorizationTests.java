@@ -51,61 +51,61 @@ public class SecurityAndAuthorizationTests {
     @Autowired
     private AuditService auditService;
 
-    private User ownerAlice;
-    private User viewerBob;
-    private User rogueEve;
-    private User adminSuper;
+    private User ownerThanvith;
+    private User viewerTej;
+    private User roguePriya;
+    private User adminAnanya;
     private UUID secretDocId;
 
     @BeforeEach
     void setup() throws IOException {
-        // Fetch or create users
-        ownerAlice = userRepository.findByEmail("owner@trustvault.local")
+        // Fetch or create users with Indian personas
+        ownerThanvith = userRepository.findByEmail("thanvith@trustvault.local")
                 .orElseGet(() -> userRepository.save(User.builder()
-                        .email("owner@trustvault.local")
+                        .email("thanvith@trustvault.local")
                         .password("Password123!")
-                        .fullName("Alice Owner")
+                        .fullName("Thanvith Reddy")
                         .role(Role.ROLE_OWNER)
                         .build()));
 
-        viewerBob = userRepository.findByEmail("viewer@trustvault.local")
+        viewerTej = userRepository.findByEmail("tej@trustvault.local")
                 .orElseGet(() -> userRepository.save(User.builder()
-                        .email("viewer@trustvault.local")
+                        .email("tej@trustvault.local")
                         .password("Password123!")
-                        .fullName("Bob Viewer")
+                        .fullName("Tej Sharma")
                         .role(Role.ROLE_VIEWER)
                         .build()));
 
-        rogueEve = userRepository.findByEmail("unauthorized@trustvault.local")
+        roguePriya = userRepository.findByEmail("priya@trustvault.local")
                 .orElseGet(() -> userRepository.save(User.builder()
-                        .email("unauthorized@trustvault.local")
+                        .email("priya@trustvault.local")
                         .password("Password123!")
-                        .fullName("Eve Rogue")
+                        .fullName("Priya Patel")
                         .role(Role.ROLE_VIEWER)
                         .build()));
 
-        adminSuper = userRepository.findByEmail("admin@trustvault.local")
+        adminAnanya = userRepository.findByEmail("admin@trustvault.local")
                 .orElseGet(() -> userRepository.save(User.builder()
                         .email("admin@trustvault.local")
                         .password("Password123!")
-                        .fullName("Super Admin")
+                        .fullName("Ananya Iyer")
                         .role(Role.ROLE_ADMIN)
                         .build()));
 
-        // Upload a confidential document owned by Alice
+        // Upload a confidential document owned by Thanvith
         MockMultipartFile file = new MockMultipartFile(
                 "file",
                 "executive_salaries.txt",
                 "text/plain",
-                "SECRET SALARIES: Alice: $250k, Bob: $90k".getBytes()
+                "SECRET SALARIES: Thanvith: ₹45L, Tej: ₹18L".getBytes()
         );
 
         var docResponse = documentService.uploadDocument(
                 file,
-                "Executive Salaries 2026",
+                "Executive Compensation FY26",
                 "Highly confidential executive payroll figures",
                 "Financials",
-                ownerAlice,
+                ownerThanvith,
                 "127.0.0.1"
         );
 
@@ -115,38 +115,38 @@ public class SecurityAndAuthorizationTests {
     @Test
     @DisplayName("TV-TEST-01: Unauthorized user cannot read or download another user's document")
     void testUnauthorizedUserCannotReadOrDownloadOwnerDocument() {
-        // Eve has no grant on Alice's document
+        // Priya has no grant on Thanvith's document
         assertThrows(AccessDeniedException.class, () -> {
-            documentService.streamDocument(secretDocId, rogueEve, "192.168.1.50");
+            documentService.streamDocument(secretDocId, roguePriya, "192.168.1.50");
         }, "Unauthorized user must be blocked with AccessDeniedException");
 
         assertThrows(AccessDeniedException.class, () -> {
-            documentService.getDocument(secretDocId, rogueEve, "192.168.1.50");
+            documentService.getDocument(secretDocId, roguePriya, "192.168.1.50");
         }, "Unauthorized user cannot inspect metadata");
     }
 
     @Test
     @DisplayName("TV-TEST-02: Instant Revocation - Taking access away works immediately (0-latency)")
     void testInstantRevocationTakesEffectImmediately() {
-        // 1. Alice grants Bob READ access
+        // 1. Thanvith grants Tej READ access
         permissionManagementService.grantPermission(
                 secretDocId,
-                new GrantPermissionRequest(viewerBob.getEmail(), PermissionLevel.READ),
-                ownerAlice,
+                new GrantPermissionRequest(viewerTej.getEmail(), PermissionLevel.READ),
+                ownerThanvith,
                 "127.0.0.1"
         );
 
-        // 2. Bob can download document
-        var payload = documentService.streamDocument(secretDocId, viewerBob, "127.0.0.1");
+        // 2. Tej can download document
+        var payload = documentService.streamDocument(secretDocId, viewerTej, "127.0.0.1");
         assertNotNull(payload);
         assertEquals("executive_salaries.txt", payload.originalFilename());
 
-        // 3. Alice immediately revokes Bob's access
-        permissionManagementService.revokePermission(secretDocId, viewerBob.getEmail(), ownerAlice, "127.0.0.1");
+        // 3. Thanvith immediately revokes Tej's access
+        permissionManagementService.revokePermission(secretDocId, viewerTej.getEmail(), ownerThanvith, "127.0.0.1");
 
-        // 4. Bob's immediate subsequent attempt MUST fail
+        // 4. Tej's immediate subsequent attempt MUST fail
         assertThrows(AccessDeniedException.class, () -> {
-            documentService.streamDocument(secretDocId, viewerBob, "127.0.0.1");
+            documentService.streamDocument(secretDocId, viewerTej, "127.0.0.1");
         }, "Revoked user must be rejected immediately on subsequent access");
     }
 
@@ -157,7 +157,7 @@ public class SecurityAndAuthorizationTests {
 
         // Attempt unauthorized access
         try {
-            documentService.streamDocument(secretDocId, rogueEve, "10.0.0.99");
+            documentService.streamDocument(secretDocId, roguePriya, "10.0.0.99");
         } catch (AccessDeniedException ignored) {}
 
         List<AuditLog> deniedLogs = auditLogRepository.findByStatusOrderByTimestampDesc("DENIED");
@@ -165,16 +165,16 @@ public class SecurityAndAuthorizationTests {
 
         AuditLog latestDenied = deniedLogs.get(0);
         assertEquals("ACCESS_REFUSED", latestDenied.getAction());
-        assertEquals(rogueEve.getEmail(), latestDenied.getUserEmail());
+        assertEquals(roguePriya.getEmail(), latestDenied.getUserEmail());
         assertEquals("10.0.0.99", latestDenied.getIpAddress());
     }
 
     @Test
     @DisplayName("TV-TEST-04: Least Privilege - Administrator cannot read document without explicit grant")
     void testAdminCannotReadDocumentWithoutExplicitGrant() {
-        // Admin user attempts to read Alice's confidential document
+        // Admin user attempts to read Thanvith's confidential document
         assertThrows(AccessDeniedException.class, () -> {
-            documentService.streamDocument(secretDocId, adminSuper, "127.0.0.1");
+            documentService.streamDocument(secretDocId, adminAnanya, "127.0.0.1");
         }, "Administrator must not bypass document authorization without explicit grant");
     }
 

@@ -18,43 +18,43 @@ export const Navbar: React.FC<NavbarProps> = ({
   onLogout,
 }) => {
   const demoUsers = [
-    { email: 'owner@trustvault.local', name: 'Alice (Owner)', role: 'OWNER', color: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
-    { email: 'viewer@trustvault.local', name: 'Bob (Viewer)', role: 'VIEWER', color: 'bg-blue-100 text-blue-800 border-blue-300' },
-    { email: 'auditor@trustvault.local', name: 'Carol (Auditor)', role: 'AUDITOR', color: 'bg-indigo-100 text-indigo-800 border-indigo-300' },
-    { email: 'unauthorized@trustvault.local', name: 'Eve (Rogue)', role: 'UNAUTHORIZED', color: 'bg-rose-100 text-rose-800 border-rose-300' },
-    { email: 'admin@trustvault.local', name: 'Admin', role: 'ADMIN', color: 'bg-purple-100 text-purple-800 border-purple-300' },
+    { email: 'thanvith@trustvault.local', name: 'Thanvith', role: 'OWNER', title: 'CFO / Owner', initials: 'TR', color: 'bg-emerald-100 text-emerald-800 border-emerald-300 ring-emerald-500/20' },
+    { email: 'tej@trustvault.local', name: 'Tej', role: 'VIEWER', title: 'Eng Lead / Viewer', initials: 'TS', color: 'bg-blue-100 text-blue-800 border-blue-300 ring-blue-500/20' },
+    { email: 'vikram@trustvault.local', name: 'Vikram', role: 'AUDITOR', title: 'Statutory Auditor', initials: 'VM', color: 'bg-indigo-100 text-indigo-800 border-indigo-300 ring-indigo-500/20' },
+    { email: 'priya@trustvault.local', name: 'Priya', role: 'UNAUTHORIZED', title: 'Unauthorized Probe', initials: 'PP', color: 'bg-rose-100 text-rose-800 border-rose-300 ring-rose-500/20' },
+    { email: 'admin@trustvault.local', name: 'Ananya', role: 'ADMIN', title: 'Security Officer', initials: 'AI', color: 'bg-purple-100 text-purple-800 border-purple-300 ring-purple-500/20' },
   ];
 
   return (
-    <header className="border-b border-slate-200 bg-white/95 backdrop-blur sticky top-0 z-40 shadow-xs">
+    <header className="border-b border-slate-200 bg-white/95 backdrop-blur-md sticky top-0 z-40 shadow-xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           
           {/* Logo & Brand */}
           <div className="flex items-center space-x-3">
-            <div className="bg-gradient-to-tr from-blue-600 to-indigo-600 p-2 rounded-xl shadow-md shadow-blue-500/10">
-              <Shield className="h-6 w-6 text-white" />
+            <div className="bg-gradient-to-tr from-blue-600 to-indigo-600 p-2.5 rounded-xl shadow-md shadow-blue-500/15 flex items-center justify-center">
+              <Shield className="h-5 w-5 text-white" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <span className="text-xl font-bold tracking-tight text-slate-900">TrustVault</span>
-                <span className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full font-mono font-medium">
-                  v1.0 Immutable
+                <span className="text-xl font-extrabold tracking-tight text-slate-900">TrustVault</span>
+                <span className="text-[10px] bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full font-mono font-semibold uppercase tracking-wider">
+                  Enterprise
                 </span>
               </div>
-              <p className="text-xs text-slate-500">Zero-Trust Document Sharing & Provable Audit Trail</p>
+              <p className="text-xs text-slate-500 hidden sm:block">Zero-Trust Document Security & Provable Audit Trail</p>
             </div>
           </div>
 
           {/* Navigation Tabs (Vault vs Admin Audit) */}
           {currentUser && (
-            <div className="flex space-x-2">
+            <div className="flex space-x-1.5 bg-slate-100/80 p-1 rounded-xl border border-slate-200">
               <button
                 onClick={() => setActiveTab('vault')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition ${
                   activeTab === 'vault'
-                    ? 'bg-slate-100 text-blue-700 border border-slate-300 shadow-xs font-semibold'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
+                    ? 'bg-white text-blue-700 shadow-xs border border-slate-200'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
                 }`}
               >
                 Document Vault
@@ -63,63 +63,75 @@ export const Navbar: React.FC<NavbarProps> = ({
               {currentUser.role === 'ROLE_ADMIN' && (
                 <button
                   onClick={() => setActiveTab('audit')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition flex items-center space-x-2 ${
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition flex items-center space-x-1.5 ${
                     activeTab === 'audit'
-                      ? 'bg-purple-100 text-purple-900 border border-purple-300 shadow-xs font-semibold'
-                      : 'text-slate-600 hover:text-purple-900 hover:bg-purple-50'
+                      ? 'bg-purple-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-purple-800 hover:bg-white/50'
                   }`}
                 >
-                  <ShieldAlert className="h-4 w-4 text-purple-600" />
-                  <span>Admin Audit Dashboard</span>
+                  <ShieldAlert className="h-3.5 w-3.5" />
+                  <span>Admin Audit Ledger</span>
                 </button>
               )}
             </div>
           )}
 
           {/* Quick Demo Switcher & Active Account */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-3">
             {currentUser ? (
               <div className="flex items-center space-x-3">
-                {/* Demo persona quick switcher */}
-                <div className="hidden lg:flex items-center space-x-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200">
-                  <span className="text-xs text-slate-500 px-2 font-mono flex items-center gap-1 font-medium">
-                    <UserCheck className="h-3.5 w-3.5" /> Persona:
+                {/* Persona Switcher Pills */}
+                <div className="hidden xl:flex items-center space-x-1 bg-slate-100/90 p-1 rounded-xl border border-slate-200">
+                  <span className="text-[11px] text-slate-500 px-2 font-medium flex items-center gap-1">
+                    <UserCheck className="h-3 w-3 text-slate-400" /> Switch:
                   </span>
                   {demoUsers.map((u) => {
-                    const isActive = currentUser.email === u.email;
+                    const isActive = currentUser.email === u.email || 
+                      (u.email === 'thanvith@trustvault.local' && currentUser.email === 'owner@trustvault.local') ||
+                      (u.email === 'tej@trustvault.local' && currentUser.email === 'viewer@trustvault.local') ||
+                      (u.email === 'vikram@trustvault.local' && currentUser.email === 'auditor@trustvault.local') ||
+                      (u.email === 'priya@trustvault.local' && currentUser.email === 'unauthorized@trustvault.local');
+
                     return (
                       <button
                         key={u.email}
                         onClick={() => onSwitchUser(u.email)}
-                        className={`text-xs px-2.5 py-1 rounded-lg border font-medium transition ${
+                        className={`text-xs px-2.5 py-1 rounded-lg border font-semibold transition flex items-center gap-1.5 ${
                           isActive
-                            ? `${u.color} shadow-xs ring-1 ring-blue-500/50`
+                            ? `${u.color} shadow-xs ring-2`
                             : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-white'
                         }`}
-                        title={`Switch to ${u.name}`}
+                        title={`Switch to ${u.name} (${u.title})`}
                       >
-                        {u.name.split(' ')[0]}
+                        <span className="text-[10px] font-bold opacity-75">{u.initials}</span>
+                        <span>{u.name}</span>
                       </button>
                     );
                   })}
                 </div>
 
-                {/* User Info Badge */}
-                <div className="text-right">
-                  <div className="text-sm font-semibold text-slate-900">{currentUser.fullName}</div>
-                  <div className="text-xs text-slate-500 font-mono">{currentUser.email}</div>
+                {/* User Info Avatar Badge */}
+                <div className="flex items-center space-x-2 pl-2 border-l border-slate-200">
+                  <div className="w-8 h-8 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center shadow-xs">
+                    {currentUser.fullName ? currentUser.fullName.split(' ').map(n => n[0]).slice(0, 2).join('') : 'U'}
+                  </div>
+                  <div className="text-right hidden sm:block">
+                    <div className="text-xs font-bold text-slate-900 leading-tight">{currentUser.fullName}</div>
+                    <div className="text-[10px] text-slate-500 font-mono leading-tight">{currentUser.email}</div>
+                  </div>
                 </div>
 
+                {/* Logout Button */}
                 <button
                   onClick={onLogout}
-                  className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-rose-600 transition border border-slate-200"
+                  className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-rose-600 transition border border-slate-200"
                   title="Logout"
                 >
                   <LogOut className="h-4 w-4" />
                 </button>
               </div>
             ) : (
-              <div className="text-sm text-slate-500">Please sign in</div>
+              <div className="text-xs text-slate-500 font-medium">Please sign in</div>
             )}
           </div>
 

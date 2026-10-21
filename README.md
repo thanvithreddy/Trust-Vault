@@ -9,11 +9,11 @@ When running or opening TrustVault, the database comes pre-seeded with five dist
 
 | Role / Persona | Email | Password | Access Capabilities |
 | :--- | :--- | :--- | :--- |
-| **Document Owner (Alice - CFO)** | `owner@trustvault.local` | `Password123!` | Owns Q3 Financials & MSA Contracts. Can grant/revoke permissions and request AI suggestions. |
-| **Viewer (Bob - Contractor)** | `viewer@trustvault.local` | `Password123!` | Granted `READ` on Apex MSA only. Cannot see or download Q3 Financials. |
-| **Auditor (Carol - KPMG)** | `auditor@trustvault.local` | `Password123!` | Granted `READ` on Q3 Financial Statements for audit review. |
-| **Unauthorized (Eve - Rogue)** | `unauthorized@trustvault.local` | `Password123!` | Zero active grants. Used to demonstrate real-time access refusal and audit alerting. |
-| **Administrator (SysAdmin)** | `admin@trustvault.local` | `Password123!` | Full access to the Audit Trail and Cryptographic Integrity verification. Cannot read documents without explicit grant. |
+| **Document Owner (Thanvith Reddy - CFO)** | `thanvith@trustvault.local`<br>*(alias: `owner@trustvault.local`)* | `Password123!` | Owns FY26 Executive Payroll & Tata MSA Contracts. Can grant/revoke permissions and request AI suggestions. |
+| **Viewer (Tej Sharma - Eng Lead)** | `tej@trustvault.local`<br>*(alias: `viewer@trustvault.local`)* | `Password123!` | Granted `READ` on Tata MSA only. Cannot see or download Executive Payroll statements. |
+| **Auditor (Vikram Malhotra - Statutory Auditor)** | `vikram@trustvault.local`<br>*(alias: `auditor@trustvault.local`)* | `Password123!` | Granted `READ` on FY26 Executive Payroll Statements for statutory compliance audit. |
+| **Unauthorized (Priya Patel - Contractor)** | `priya@trustvault.local`<br>*(alias: `unauthorized@trustvault.local`)* | `Password123!` | Zero active grants. Used to demonstrate real-time access refusal and audit alerting. |
+| **Administrator (Ananya Iyer - CSO)** | `admin@trustvault.local` | `Password123!` | Full access to the Audit Trail and Cryptographic Integrity verification. Cannot read documents without explicit grant. |
 
 ---
 
@@ -89,7 +89,7 @@ cd frontend
 npm install
 npm run dev
 ```
-Open `http://localhost:5173` in your browser. Use the Persona quick switcher buttons to test access and revocation between Alice, Bob, Carol, Eve, and Admin!
+Open `http://localhost:5173` in your browser. Use the Persona quick switcher buttons to test access and revocation between Thanvith, Tej, Vikram, Priya, and Ananya!
 
 ---
 
@@ -107,7 +107,7 @@ To test whether our test suite is genuinely testing authorization:
 2. Locate line 35: `return grantOpt.isPresent();`
 3. Modify it to `return true;` (simulating removed authorization).
 4. Run `.\mvnw.cmd test`.
-5. **Result:** The tests fail with assertion errors because Eve is expected to throw `AccessDeniedException` and fail!
+5. **Result:** The tests fail with assertion errors because Priya is expected to throw `AccessDeniedException` and fail!
 
 ---
 

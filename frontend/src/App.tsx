@@ -6,7 +6,7 @@ import { ShareModal } from './components/ShareModal';
 import { AdminDashboard } from './components/AdminDashboard';
 import { api } from './api';
 import type { User, DocumentItem } from './types';
-import { Shield, AlertCircle, ArrowRight } from 'lucide-react';
+import { Shield, AlertCircle, ArrowRight, CheckCircle2, Info, X } from 'lucide-react';
 
 export const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -19,14 +19,24 @@ export const App: React.FC = () => {
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [selectedShareDoc, setSelectedShareDoc] = useState<DocumentItem | null>(null);
 
+  // Toast Notification System
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
   // Login form state
-  const [loginEmail, setLoginEmail] = useState('owner@trustvault.local');
+  const [loginEmail, setLoginEmail] = useState('thanvith@trustvault.local');
   const [loginPassword, setLoginPassword] = useState('Password123!');
   const [loginError, setLoginError] = useState<string | null>(null);
 
   useEffect(() => {
-    handlePersonaLogin('owner@trustvault.local');
+    handlePersonaLogin('thanvith@trustvault.local');
   }, []);
+
+  const notify = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setToast({ message, type });
+    setTimeout(() => {
+      setToast((prev) => (prev?.message === message ? null : prev));
+    }, 4500);
+  };
 
   const loadVaultData = async () => {
     try {
@@ -45,7 +55,18 @@ export const App: React.FC = () => {
     try {
       setIsLoading(true);
       setLoginError(null);
-      const user = await api.login(email, 'Password123!');
+      let user: User;
+      try {
+        user = await api.login(email, 'Password123!');
+      } catch (e) {
+        // Fallback to legacy alias if database has not yet synced new email
+        const aliasEmail = email.replace('thanvith', 'owner')
+                                .replace('tej', 'viewer')
+                                .replace('vikram', 'auditor')
+                                .replace('priya', 'unauthorized');
+        user = await api.login(aliasEmail, 'Password123!');
+      }
+
       setCurrentUser(user);
       if (user.role === 'ROLE_ADMIN') {
         setActiveTab('audit');
@@ -53,6 +74,7 @@ export const App: React.FC = () => {
         setActiveTab('vault');
       }
       await loadVaultData();
+      notify(`Logged in as ${user.fullName}`, 'info');
     } catch (err: any) {
       const msg = err.response?.data?.message || err.message || 'Login failed';
       setLoginError(msg);
@@ -75,8 +97,9 @@ export const App: React.FC = () => {
         setActiveTab('vault');
       }
       await loadVaultData();
+      notify(`Welcome back, ${user.fullName}!`, 'success');
     } catch (err: any) {
-      setLoginError('Invalid credentials');
+      setLoginError('Invalid credentials. Password for demo accounts is Password123!');
     } finally {
       setIsLoading(false);
     }
@@ -86,11 +109,37 @@ export const App: React.FC = () => {
     api.logout();
     setCurrentUser(null);
     setDocuments([]);
+    notify('Logged out of TrustVault', 'info');
   };
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
       
+      {/* Toast Notification Banner */}
+      {toast && (
+        <div className="fixed top-20 right-6 z-50 max-w-md w-full animate-in fade-in slide-in-from-top-4 duration-200">
+          <div
+            className={`p-4 rounded-2xl border shadow-lg flex items-center justify-between gap-3 ${
+              toast.type === 'success'
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                : toast.type === 'error'
+                ? 'bg-rose-50 border-rose-200 text-rose-900'
+                : 'bg-blue-50 border-blue-200 text-blue-900'
+            }`}
+          >
+            <div className="flex items-center gap-2.5 text-xs font-bold">
+              {toast.type === 'success' && <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />}
+              {toast.type === 'error' && <AlertCircle className="h-4 w-4 text-rose-600 shrink-0" />}
+              {toast.type === 'info' && <Info className="h-4 w-4 text-blue-600 shrink-0" />}
+              <span>{toast.message}</span>
+            </div>
+            <button onClick={() => setToast(null)} className="text-slate-400 hover:text-slate-700 p-0.5">
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Navigation Header */}
       <Navbar
         currentUser={currentUser}
@@ -105,54 +154,54 @@ export const App: React.FC = () => {
         
         {!currentUser ? (
           /* Login & Persona Showcase Screen */
-          <div className="max-w-md mx-auto mt-12 bg-white border border-slate-200 rounded-3xl p-8 shadow-xl">
+          <div className="max-w-md mx-auto mt-8 bg-white border border-slate-200 rounded-3xl p-8 shadow-xl">
             <div className="text-center mb-6">
               <div className="inline-flex p-3 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl shadow-md shadow-blue-500/20 mb-3">
                 <Shield className="h-8 w-8 text-white" />
               </div>
-              <h2 className="text-2xl font-bold text-slate-900">TrustVault Access Gate</h2>
-              <p className="text-xs text-slate-500 mt-1">Authenticate identity to access encrypted records</p>
+              <h2 className="text-2xl font-black text-slate-900 tracking-tight">TrustVault Access Gate</h2>
+              <p className="text-xs text-slate-500 mt-1">Authenticate identity to access encrypted enterprise records</p>
             </div>
 
             {loginError && (
-              <div className="mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl flex items-center gap-2">
+              <div className="mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl flex items-center gap-2 font-medium">
                 <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
                 <span>{loginError}</span>
               </div>
             )}
 
-            {/* Quick Demo Switcher Buttons */}
+            {/* Quick Demo Switcher Buttons with Indian Names */}
             <div className="space-y-2 mb-6">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 block mb-1">
-                Select Persona (Instant Switch):
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-1.5">
+                Select Persona (Instant 1-Click Login):
               </span>
 
               {[
-                { email: 'owner@trustvault.local', name: 'Alice (Owner / CFO)', desc: 'Has full ownership of financial and legal files' },
-                { email: 'viewer@trustvault.local', name: 'Bob (Viewer / Contractor)', desc: 'Has read grant for Apex MSA only' },
-                { email: 'auditor@trustvault.local', name: 'Carol (Auditor / KPMG)', desc: 'Has read grant for Q3 Financial Statements' },
-                { email: 'unauthorized@trustvault.local', name: 'Eve (Unauthorized / Ex-Employee)', desc: 'Zero grants - tests blocked attempts' },
-                { email: 'admin@trustvault.local', name: 'Super Admin', desc: 'System monitoring & cryptographic audit ledger' },
+                { email: 'thanvith@trustvault.local', name: 'Thanvith Reddy (CFO & Owner)', desc: 'Full ownership of FY26 Payroll and Tata MSA contracts' },
+                { email: 'tej@trustvault.local', name: 'Tej Sharma (Engineering Lead / Viewer)', desc: 'Granted read access on Tata Consultancy MSA only' },
+                { email: 'vikram@trustvault.local', name: 'Vikram Malhotra (Lead Statutory Auditor)', desc: 'Granted read access on FY26 Executive Payroll Statements' },
+                { email: 'priya@trustvault.local', name: 'Priya Patel (Former Contractor / Unauthorized)', desc: 'Zero active permissions - tests real-time blocked access' },
+                { email: 'admin@trustvault.local', name: 'Ananya Iyer (Chief Security Officer)', desc: 'System governance, live audit ledger & cryptographic integrity' },
               ].map((p) => (
                 <button
                   key={p.email}
                   onClick={() => handlePersonaLogin(p.email)}
-                  className="w-full text-left p-3 rounded-xl bg-slate-50 border border-slate-200 hover:border-blue-400 hover:bg-blue-50/40 transition group flex items-center justify-between"
+                  className="w-full text-left p-3 rounded-xl bg-slate-50 border border-slate-200 hover:border-blue-400 hover:bg-blue-50/50 transition group flex items-center justify-between"
                 >
                   <div>
                     <div className="text-xs font-bold text-slate-800 group-hover:text-blue-700 transition">
                       {p.name}
                     </div>
-                    <div className="text-[10px] text-slate-500">{p.desc}</div>
+                    <div className="text-[10px] text-slate-500 mt-0.5">{p.desc}</div>
                   </div>
-                  <ArrowRight className="h-3.5 w-3.5 text-slate-400 group-hover:text-blue-600 transition" />
+                  <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-blue-600 transition shrink-0 ml-2" />
                 </button>
               ))}
             </div>
 
             <div className="relative my-4">
               <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200"></div></div>
-              <div className="relative flex justify-center text-xs uppercase"><span className="bg-white px-2 text-slate-400 font-medium">Or Manual Login</span></div>
+              <div className="relative flex justify-center text-xs uppercase"><span className="bg-white px-2 text-slate-400 font-bold text-[10px]">Or Direct Account Login</span></div>
             </div>
 
             <form onSubmit={handleCustomLogin} className="space-y-3">
@@ -179,9 +228,9 @@ export const App: React.FC = () => {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-xs transition"
+                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs transition"
               >
-                Sign In
+                Sign In to Vault
               </button>
             </form>
 
@@ -197,6 +246,7 @@ export const App: React.FC = () => {
                 onOpenShare={(doc) => setSelectedShareDoc(doc)}
                 onDocumentDeleted={(id) => setDocuments((prev) => prev.filter((d) => d.id !== id))}
                 onRefresh={loadVaultData}
+                onNotify={notify}
               />
             ) : (
               <AdminDashboard />
@@ -213,6 +263,7 @@ export const App: React.FC = () => {
         onUploadSuccess={(newDoc) => {
           setDocuments((prev) => [newDoc, ...prev]);
           loadVaultData();
+          notify(`Document "${newDoc.title}" securely stored in vault`, 'success');
         }}
         availableCategories={categories}
       />
@@ -223,11 +274,12 @@ export const App: React.FC = () => {
         isOpen={!!selectedShareDoc}
         onClose={() => setSelectedShareDoc(null)}
         onPermissionChanged={loadVaultData}
+        onNotify={notify}
       />
 
       {/* Footer */}
       <footer className="border-t border-slate-200 py-6 text-center text-xs text-slate-500 bg-white">
-        <p>TrustVault Security Platform • 7-Day Architecture Sprint • Provable Audit Trail & Zero-Trust Enforcement</p>
+        <p>TrustVault Security Platform • Zero-Trust Permission Engine • SHA-256 Tamper-Evident Cryptographic Ledger</p>
       </footer>
 
     </div>
