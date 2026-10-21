@@ -25,7 +25,6 @@ export const App: React.FC = () => {
   const [loginError, setLoginError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Attempt auto-login with owner for frictionless developer experience
     handlePersonaLogin('owner@trustvault.local');
   }, []);
 
@@ -90,7 +89,7 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
       
       {/* Navigation Header */}
       <Navbar
@@ -106,25 +105,25 @@ export const App: React.FC = () => {
         
         {!currentUser ? (
           /* Login & Persona Showcase Screen */
-          <div className="max-w-md mx-auto mt-12 bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl">
+          <div className="max-w-md mx-auto mt-12 bg-white border border-slate-200 rounded-3xl p-8 shadow-xl">
             <div className="text-center mb-6">
-              <div className="inline-flex p-3 bg-gradient-to-tr from-cyan-500 to-blue-600 rounded-2xl shadow-lg shadow-cyan-500/20 mb-3">
+              <div className="inline-flex p-3 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl shadow-md shadow-blue-500/20 mb-3">
                 <Shield className="h-8 w-8 text-white" />
               </div>
-              <h2 className="text-2xl font-bold text-white">TrustVault Access Gate</h2>
-              <p className="text-xs text-slate-400 mt-1">Authenticate identity to access encrypted records</p>
+              <h2 className="text-2xl font-bold text-slate-900">TrustVault Access Gate</h2>
+              <p className="text-xs text-slate-500 mt-1">Authenticate identity to access encrypted records</p>
             </div>
 
             {loginError && (
-              <div className="mb-4 p-3 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs rounded-xl flex items-center gap-2">
-                <AlertCircle className="h-4 w-4 shrink-0" />
+              <div className="mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
                 <span>{loginError}</span>
               </div>
             )}
 
             {/* Quick Demo Switcher Buttons */}
             <div className="space-y-2 mb-6">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 block mb-1">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 block mb-1">
                 Select Persona (Instant Switch):
               </span>
 
@@ -138,22 +137,22 @@ export const App: React.FC = () => {
                 <button
                   key={p.email}
                   onClick={() => handlePersonaLogin(p.email)}
-                  className="w-full text-left p-3 rounded-xl bg-slate-950 border border-slate-800 hover:border-cyan-500/50 hover:bg-slate-800/50 transition group flex items-center justify-between"
+                  className="w-full text-left p-3 rounded-xl bg-slate-50 border border-slate-200 hover:border-blue-400 hover:bg-blue-50/40 transition group flex items-center justify-between"
                 >
                   <div>
-                    <div className="text-xs font-semibold text-slate-200 group-hover:text-cyan-400 transition">
+                    <div className="text-xs font-bold text-slate-800 group-hover:text-blue-700 transition">
                       {p.name}
                     </div>
                     <div className="text-[10px] text-slate-500">{p.desc}</div>
                   </div>
-                  <ArrowRight className="h-3.5 w-3.5 text-slate-600 group-hover:text-cyan-400 transition" />
+                  <ArrowRight className="h-3.5 w-3.5 text-slate-400 group-hover:text-blue-600 transition" />
                 </button>
               ))}
             </div>
 
             <div className="relative my-4">
-              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-800"></div></div>
-              <div className="relative flex justify-center text-xs uppercase"><span className="bg-slate-900 px-2 text-slate-500">Or Manual Login</span></div>
+              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200"></div></div>
+              <div className="relative flex justify-center text-xs uppercase"><span className="bg-white px-2 text-slate-400 font-medium">Or Manual Login</span></div>
             </div>
 
             <form onSubmit={handleCustomLogin} className="space-y-3">
@@ -164,7 +163,7 @@ export const App: React.FC = () => {
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
                   placeholder="Email"
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-cyan-500"
+                  className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                 />
               </div>
               <div>
@@ -174,13 +173,13 @@ export const App: React.FC = () => {
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
                   placeholder="Password"
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-cyan-500"
+                  className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                 />
               </div>
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-xs font-semibold transition"
+                className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-xs transition"
               >
                 Sign In
               </button>
@@ -227,7 +226,7 @@ export const App: React.FC = () => {
       />
 
       {/* Footer */}
-      <footer className="border-t border-slate-900 py-6 text-center text-xs text-slate-600">
+      <footer className="border-t border-slate-200 py-6 text-center text-xs text-slate-500 bg-white">
         <p>TrustVault Security Platform • 7-Day Architecture Sprint • Provable Audit Trail & Zero-Trust Enforcement</p>
       </footer>
 
